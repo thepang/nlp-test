@@ -1,3 +1,16 @@
+# Basic requirements for all
 pre-commit 
 black
 flake8
+regex
+
+# Web scraping
+requests
+beautifulsoup4
+
+# Data science
+scikit-learn
+
+# DB and data
+pymongo
+pandas
