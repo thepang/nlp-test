@@ -1,11 +1,13 @@
 import glob
 import json
+import os.path
 import time
 
 import requests
 from bs4 import BeautifulSoup
 
 path_to_root = "/Users/pang/repos/nlp-test"
+eps_to_skip = ["460", "497"]
 
 
 def get_transcript_html(years):
@@ -16,7 +18,7 @@ def get_transcript_html(years):
     """
 
     for year in years:
-        url = f"https://www.thisamericanlife.org/archive?year={str(year)}"
+        url = f"https://www.thisamericanlife.org/archive?type=episodes&year={str(year)}"
         r = requests.get(url)
 
         if r.status_code != 200:
@@ -50,8 +52,18 @@ def get_ep_metadata(year):
 
         date = episode.find("span", attrs={"class": "date-display-single"}).text.strip()
 
-        summary = episode.find("p").text.strip()
-
+        almost = episode.find(
+            "div",
+            attrs={
+                "class": "field field-name-body field-type-text-with-summary field-label-hidden"
+            },
+        )
+        if almost:
+            summary = almost.find(
+                "div", attrs={"class": "field-item even"}
+            ).text.strip()
+        else:
+            summary = ""
         d = {"ep_title": title, "air_date": date, "ep_summary": summary}
 
         metadata[num] = d
@@ -70,6 +82,7 @@ def get_transcripts(year):
     :param year: Used to tell function which year to process.
     :return: None
     """
+
     with open(
         f"{path_to_root}/data/002_metadata/002_ep_metadata_{year}.json", "r"
     ) as file:
@@ -77,6 +90,17 @@ def get_transcripts(year):
     episodes = json.loads(x)
 
     for ep in episodes:
+        file_to_write = (
+            f"{path_to_root}/data/003_transcripts/003_transcript_{str(year)}_{ep}.txt"
+        )
+        if os.path.isfile(file_to_write):
+            print(f"Found {file_to_write}. Skipping")
+            continue
+
+        if str(ep) in eps_to_skip:
+            print(f"Skipping episode: {ep}")
+            continue
+
         print(f"Getting transcript for episode: {ep}")
         url = f"https://www.thisamericanlife.org/{ep}/transcript"
         r = requests.get(url)
@@ -88,10 +112,7 @@ def get_transcripts(year):
 
         soup = BeautifulSoup(r.text, "lxml")
 
-        with open(
-            f"{path_to_root}/data/003_transcripts/003_transcript_{str(year)}_{ep}.txt",
-            "w",
-        ) as file:
+        with open(file_to_write, "w",) as file:
             file.write(soup.prettify())
 
         print(f"Saved transcript for episode {ep}. Sleeping 10 seconds...")
@@ -149,6 +170,7 @@ def transcript_to_json(year):
 
 
 def join_metadata_json(year):
+
     with open(
         f"{path_to_root}/data/002_metadata/002_ep_metadata_{year}.json", "r"
     ) as file:
@@ -156,16 +178,24 @@ def join_metadata_json(year):
     print(f"Grabbed metadata information for year {year}")
 
     for ep_num, metadata in ep_metadatas.items():
+        file_to_write = (
+            f"{path_to_root}/data/005_JSON_full/005_{str(year)}_{ep_num.strip()}.json"
+        )
+        if os.path.isfile(file_to_write):
+            print(f"Found {file_to_write}. Skipping")
+            continue
+
+        if str(ep_num) in eps_to_skip:
+            print(f"Skipping episode: {ep_num}")
+            continue
+
         with open(
             f"{path_to_root}/data/004_JSON_transcript/004_{year}_{ep_num}.json", "r"
         ) as file:
             transcript = json.loads(file.read())
         transcript.update(metadata)
 
-        with open(
-            f"{path_to_root}/data/005_JSON_full/005_{str(year)}_{ep_num.strip()}.json",
-            "w",
-        ) as file:
+        with open(file_to_write, "w") as file:
             file.write(json.dumps(transcript))
         print(f"Combined and wrote full JSON for episode {ep_num.strip()}")
 
@@ -176,11 +206,8 @@ def join_metadata_json(year):
 #     for_fn.append(year)
 # get_transcript_html(for_fn)
 #
-# get_ep_metadata(2019)
-#
-# get_transcripts(2019)
-#
-#
-# transcript_to_json(2019)
-#
-# join_metadata_json(2019)
+for year in range(2013, 2016):
+    get_ep_metadata(year)
+    get_transcripts(year)
+    transcript_to_json(year)
+    join_metadata_json(year)

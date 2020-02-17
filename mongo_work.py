@@ -51,6 +51,5 @@ def get_episodes(query=None):
     return pd.DataFrame(records)
 
 
-# insert_documents_to_mongo(2019)
-# test = get_episodes({'ep': '666'})
-# print(test)
+# for year in range(1995, 2021):
+#     insert_documents_to_mongo(year)
