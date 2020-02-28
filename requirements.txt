@@ -11,6 +11,8 @@ beautifulsoup4
 # Data science
 scikit-learn
 gensim
+spacy
+spacy-lookups-data
 
 # DB and data
 pymongo
